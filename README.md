@@ -36,7 +36,7 @@ Without configuration, the app displays a not-connected message. It does not cre
 
 ## Sessions and old prototype data
 
-Sessions stay in memory, with no localStorage or sessionStorage persistence. Reloading or closing the page requires signing in again. This does not remove server records.
+Authentication sessions persist in browser storage across reloads and browser restarts. Supabase automatically refreshes tokens; signing out clears the saved session. Member records remain server-side.
 
 The app no longer reads or writes either old prototype storage key. Old records are neither automatically uploaded nor erased. If a prototype browser contains real records, preserve/export them separately before clearing its storage. A reviewed import flow is separate work; the app must not silently assign old records to whichever account signs in first.
 
@@ -49,6 +49,6 @@ npx playwright install chromium
 npm run test:browser
 ```
 
-Database tests run the actual migration in PGlite PostgreSQL, with Supabase's auth identity/roles emulated. They cover owner operations, anonymous denial, cross-account reads/writes/deletes, ownership reassignment, and constraints. Browser tests mock the Supabase API and exercise sign-in, organization switching, member creation, dues updates, refresh, failed writes, sign-out, and absence of browser persistence. They do not replace two-account testing against a real Supabase project.
+Database tests run the actual migration in PGlite PostgreSQL, with Supabase's auth identity/roles emulated. They cover owner operations, anonymous denial, cross-account reads/writes/deletes, ownership reassignment, and constraints. Browser tests mock the Supabase API and exercise sign-in, organization switching, member creation, dues updates, refresh, failed writes, sign-out, and session restoration after refresh and sign-out. They do not replace two-account testing against a real Supabase project.
 
 GitHub Actions runs these checks on pushes and pull requests.

@@ -10,6 +10,7 @@ test('server records, organization switching, failed writes, and sign-out', asyn
     const json = (body: unknown, status = 200) => route.fulfill({ status, contentType:'application/json', body: JSON.stringify(body) })
     if (url.pathname.endsWith('/token')) return json({ access_token: jwt, refresh_token:'refresh', expires_in:3600, token_type:'bearer', user })
     if (url.pathname.endsWith('/logout')) return json({})
+    if (url.pathname.endsWith('/user')) return json(user)
     if (url.pathname.endsWith('/organizations')) return json([{ id:'a', name:'Club A' },{ id:'b', name:'Club B' }])
     if (url.pathname.endsWith('/members')) {
       const org = url.searchParams.get('organization_id')?.replace('eq.','') ?? 'a'
@@ -44,7 +45,9 @@ test('server records, organization switching, failed writes, and sign-out', asyn
   await page.getByLabel('Organization', { exact:true }).selectOption('a')
   await expect(page.getByText('Taylor', { exact:true })).toBeVisible()
   await expect(page.getByText('Sam', { exact:true })).toHaveCount(0)
-  expect(await page.evaluate(() => ({ local:localStorage.length, session:sessionStorage.length }))).toEqual({local:0,session:0})
+  await page.reload()
+  await expect(page.getByText('Taylor', { exact:true })).toBeVisible()
+  await expect(page.getByRole('button', { name:'Sign in', exact:true })).toHaveCount(0)
   await page.getByRole('button', { name:'Sign out' }).click()
   await expect(page.getByRole('heading', { name:'Sign in to DuesNest' })).toBeVisible()
   await expect(page.getByText('Taylor', { exact:true })).toHaveCount(0)

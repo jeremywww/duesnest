@@ -3,8 +3,8 @@ import { createClient } from '@supabase/supabase-js'
 const url = import.meta.env.VITE_SUPABASE_URL
 const key = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY
 
-// Neither member data nor sessions are persisted in browser storage.
-// Reloading the page requires signing in again.
+// Persist authentication across reloads; member records remain in the database.
+// Supabase refreshes tokens automatically and clears the session on sign-out.
 export const supabase = url && key ? createClient(url, key, {
-  auth: { persistSession: false, autoRefreshToken: true, detectSessionInUrl: true },
+  auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true },
 }) : null
