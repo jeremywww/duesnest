@@ -26,6 +26,17 @@ test('server records, organization switching, failed writes, and sign-out', asyn
   await page.getByLabel('Password', { exact:true }).fill('test-password-123')
   await page.getByRole('button', { name:'Sign in', exact:true }).click()
   await expect(page.getByText('Taylor', { exact:true })).toBeVisible()
+  const csvDownload = page.waitForEvent('download')
+  await page.getByRole('button', { name:'Download CSV' }).click()
+  const csv = await csvDownload
+  expect(csv.suggestedFilename()).toBe('Club-A-members.csv')
+  const csvStream = await csv.createReadStream()
+  const csvChunks: Buffer[] = []
+  for await (const chunk of csvStream!) csvChunks.push(Buffer.from(chunk))
+  const exported = Buffer.concat(csvChunks).toString('utf8')
+  expect(exported).toContain('"Name","Email","Dues (USD)","Status"')
+  expect(exported).toContain('"Taylor","t@example.com","50.00","Unpaid"')
+  expect(exported).not.toContain('Sam')
   await page.getByRole('button', { name:'Edit Taylor', exact:true }).click()
   await expect(page.getByRole('heading', { name:'Edit member', exact:true })).toBeVisible()
   await expect(page.getByLabel('Full name', { exact:true })).toHaveValue('Taylor')

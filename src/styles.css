@@ -11,3 +11,5 @@
 .brand img{display:block;width:100%;max-width:200px;height:auto}
 
 .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap;border:0}.workspace-bar{padding:12px 28px;gap:12px;align-items:center}.workspace-bar>label{display:flex;align-items:center;gap:10px;font-size:12px;font-weight:700}.workspace-bar>label select{margin-top:0}.workspace-bar .new-organization{align-items:center;gap:8px}.workspace-bar .new-organization input{margin-top:0;width:200px}.compact-new-organization{padding:9px 12px;font-size:12px}@media(max-width:600px){.workspace-bar{padding:12px 18px}.workspace-bar .new-organization{width:100%}.workspace-bar .new-organization input{flex:1;min-width:100px;width:auto}}
+
+.directory-actions{display:flex;justify-content:flex-end;margin:0 0 12px}

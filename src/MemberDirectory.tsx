@@ -46,6 +46,22 @@ export function MemberDirectory({ organization }: { organization: { id: string; 
 
   const shown = members.filter(m => (m.name + ' ' + m.email).toLowerCase().includes(search.toLowerCase()))
 
+  function downloadCsv() {
+    const cell = (value: string | number) => {
+      const text = String(value)
+      const safe = /^[\s]*[=+@-]/.test(text) ? "'" + text : text
+      return '"' + safe.replace(/"/g, '""') + '"'
+    }
+    const rows = [['Name', 'Email', 'Dues (USD)', 'Status'], ...members.map(m => [m.name, m.email, m.amount.toFixed(2), m.paid ? 'Paid' : 'Unpaid'])]
+    const csv = '\uFEFF' + rows.map(row => row.map(cell).join(',')).join('\r\n')
+    const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8;' }))
+    const link = document.createElement('a')
+    link.href = url
+    link.download = (organization.name.replace(/[^a-z0-9_-]+/gi, '-').replace(/^-|-$/g, '') || 'organization') + '-members.csv'
+    document.body.appendChild(link); link.click(); link.remove()
+    setTimeout(() => URL.revokeObjectURL(url), 1000)
+  }
+
   async function addMember(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     if (busy) return
@@ -109,6 +125,7 @@ export function MemberDirectory({ organization }: { organization: { id: string; 
             <div className="stat"><div className="stat-label"><CircleDollarSign size={17}/> Dues recorded</div><strong>{currency(stats.collected)}</strong><span>Marked as paid</span></div>
             <div className="stat"><div className="stat-label"><Wallet size={17}/> Outstanding</div><strong>{currency(stats.outstanding)}</strong><span>Not yet marked paid</span></div>
           </section>}
+          <div className="directory-actions"><button className="outline" disabled={loading || readFailed || busy} onClick={downloadCsv}>↓ Download CSV</button></div>
           <section className="panel">
             <div className="panel-head"><div><h2>Member directory</h2><p className="muted">Track members and manually record dues.</p></div><div className="search"><Search size={17}/><input aria-label="Search members" placeholder="Search members" value={search} onChange={e => setSearch(e.target.value)}/></div></div>
             {loading ? <p role="status" className="empty">Loading members…</p> : readFailed ? <p className="empty">Records could not be loaded. Use Refresh records to try again.</p> : shown.length ? <div className="table-wrap"><table><thead><tr><th>MEMBER</th><th>DUES</th><th>STATUS</th><th>ACTIONS</th></tr></thead><tbody>{shown.map(m => <tr key={m.id}><td><strong>{m.name}</strong><small>{m.email}</small></td><td>{currency(m.amount)}</td><td><span className={m.paid ? 'pill paid' : 'pill pending'}>{m.paid ? 'Paid' : 'Unpaid'}</span></td><td><button disabled={busy || loading} className="text-button" onClick={() => togglePaid(m.id)}>{m.paid ? 'Mark unpaid' : 'Mark paid'}</button><button disabled={busy || loading} className="text-button" aria-label={'Edit ' + m.name} onClick={() => openMember(m)}>Edit</button><button disabled={busy || loading} className="icon-button" aria-label={'Remove ' + m.name} onClick={() => removeMember(m.id)}><Trash2 size={16}/></button></td></tr>)}</tbody></table></div> :
