@@ -1,6 +1,7 @@
 import { errorMessage } from './errors'
 import { useState, type FormEvent } from 'react'
 import { supabase } from './supabase'
+import logo from './assets/logo.svg'
 
 export function Auth({ recovery = false, onRecovered }: { recovery?: boolean; onRecovered: () => void }) {
   const [mode, setMode] = useState<'signin' | 'signup' | 'reset'>('signin')
@@ -34,7 +35,7 @@ export function Auth({ recovery = false, onRecovered }: { recovery?: boolean; on
     finally { setBusy(false) }
   }
   const title = recovery ? 'Choose a new password' : mode === 'signup' ? 'Create your account' : mode === 'reset' ? 'Reset your password' : 'Sign in to DuesNest'
-  return <main className="auth-shell"><div className="modal"><h1>DuesNest</h1><h2>{title}</h2><p className="muted">Your organizations, members, and dues in one place.</p>
+  return <main className="auth-shell"><div className="modal"><h1 className="auth-brand"><img src={logo} alt="Duesnest" /></h1><h2>{title}</h2><p className="muted">Your organizations, members, and dues in one place.</p>
     <form onSubmit={submit}><fieldset disabled={busy}>
       {!recovery && <label>Email<input type="email" autoComplete="email" required value={email} onChange={e => setEmail(e.target.value)} /></label>}
       {(recovery || mode !== 'reset') && <label>Password<input type="password" required minLength={mode === 'signin' && !recovery ? 1 : 12} autoComplete={mode === 'signin' && !recovery ? 'current-password' : 'new-password'} value={password} onChange={e => setPassword(e.target.value)} /></label>}

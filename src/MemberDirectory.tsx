@@ -1,6 +1,7 @@
 import { errorMessage } from './errors'
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
-import { Bird, Check, CircleDollarSign, Plus, Search, Trash2, Users, Wallet } from 'lucide-react'
+import { Check, CircleDollarSign, Plus, Search, Trash2, Users, Wallet } from 'lucide-react'
+import logo from './assets/logo.svg'
 
 import { supabase } from './supabase'
 type Member = { id: string; name: string; email: string; amount: number; paid: boolean }
@@ -85,7 +86,7 @@ export function MemberDirectory({ organization }: { organization: { id: string; 
   return (
     <div className="app-shell">
       <aside className="sidebar">
-        <div className="brand"><span className="brand-icon"><Bird size={23} strokeWidth={2.6}/></span><span>duesnest<span className="brand-dot">.</span></span></div>
+        <div className="brand"><img src={logo} alt="Duesnest" /></div>
         <div className="nav-section">WORKSPACE</div>
         <div className="nav-item active"><Users size={19}/> Members</div>
         <div className="sidebar-bottom"><span className="status-dot"/> Your organization <small>Members & dues</small></div>
