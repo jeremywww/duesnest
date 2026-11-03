@@ -17,7 +17,7 @@ Each organization currently has **one owner account**. Staff invitations, shared
 
 ## Deployment status
 
-This code requires a Supabase project and frontend deployment before it can serve real users. Repository tests are not proof of a live deployment. Recommended hosting: Cloudflare Pages for this Vite frontend, Supabase for the database and authentication. See [deployment instructions](docs/deployment.md).
+This code requires a Supabase project and frontend deployment before it can serve real users. Repository tests are not proof of a live deployment. Recommended hosting: Cloudflare Workers for this Vite frontend, Supabase for the database and authentication. See [deployment instructions](docs/deployment.md).
 
 ## Local development
 
