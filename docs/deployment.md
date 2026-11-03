@@ -1,4 +1,4 @@
-# Supabase + Cloudflare Pages deployment
+# Supabase + Cloudflare Workers deployment
 
 ## 1. Database and authentication
 
@@ -15,16 +15,22 @@ In Authentication:
 
 From Project Settings, obtain the project URL and **publishable** API key. A legacy public anon key is also compatible. Do not use secret/service-role keys, which can bypass access controls.
 
-## 2. Cloudflare Pages
+## 2. Cloudflare Workers
 
-Connect the `jeremywww/duesnest` GitHub repository. Select the reviewed server-backed branch for a private validation deployment, then the merged production branch for launch.
+Use the existing `duesnest` Worker connected to `jeremywww/duesnest`. The repository's `wrangler.jsonc` serves Vite's `dist` directory with SPA routing and includes the `previews: {}` block required by `wrangler preview`.
 
-- Build command: `npm ci && npm run build`
-- Output directory: `dist`
-- Node.js: `24`
-- Build environment: `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY`
+Cloudflare Workers Builds settings:
+- Build command: `npm run build` (Cloudflare installs dependencies first).
+- Production deploy command: `npx wrangler deploy`.
+- Preview/non-production deploy command: `npx wrangler preview`.
+- Node.js: `24`.
+- Build environment: `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY`.
 
-Vite embeds these public settings at build time, so changing them requires rebuilding. Use a separate Supabase development project for previews; do not point unreviewed preview branches at production data. Cloudflare Pages serves the static frontend; Supabase performs authentication and database authorization.
+For manual deployment, run `npm ci && npm run build` first, then the appropriate Wrangler command. Preview deploys do not publish production. Do not create a separate Pages project just to resolve the missing previews-block error.
+
+Vite embeds the Supabase public settings at **build time**. Configure them in the Cloudflare build environment, not only runtime variables, and rebuild after changing them. Without either setting, the deployed app displays “DuesNest is not connected yet.” Never put a secret/service-role key in a VITE variable.
+
+Use a separate Supabase development project for previews. Cloudflare serves the frontend; Supabase handles authentication and database authorization. Deployment success alone does not verify a configured database or working sign-in.
 
 ## 3. Release gate
 
