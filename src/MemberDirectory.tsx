@@ -12,6 +12,10 @@ export function MemberDirectory({ organization }: { organization: { id: string; 
   const [members, setMembers] = useState<Member[]>([])
   const [search, setSearch] = useState('')
   const [showForm, setShowForm] = useState(false)
+  const [editing, setEditing] = useState<string | null>(null)
+  function openMember(member?: Member) {
+    setEditing(member?.id ?? null); setName(member?.name ?? ''); setEmail(member?.email ?? ''); setAmount(String(member?.amount ?? 50)); setError(''); setShowForm(true)
+  }
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [amount, setAmount] = useState('50')
@@ -52,9 +56,13 @@ export function MemberDirectory({ organization }: { organization: { id: string; 
     }
     setBusy(true); setError('')
     try {
-      const { data, error } = await supabase!.from('members').insert({ organization_id: organization.id, name: name.trim(), email: email.trim(), amount: Math.round(dollars * 100) / 100, paid: false }).select('id,name,email,amount,paid').single()
+      const fields = { name: name.trim(), email: email.trim(), amount: Math.round(dollars * 100) / 100 }
+      const query = editing
+        ? supabase!.from('members').update(fields).eq('id', editing).eq('organization_id', organization.id)
+        : supabase!.from('members').insert({ organization_id: organization.id, ...fields, paid: false })
+      const { data, error } = await query.select('id,name,email,amount,paid').single()
       if (error) throw error
-      setMembers(prev => [...prev, data])
+      setMembers(prev => editing ? prev.map(m => m.id === editing ? data : m) : [...prev, data])
       setName(''); setEmail(''); setAmount('50'); setShowForm(false)
     } catch (e) { setError(errorMessage(e, 'Unable to save member.')) }
     finally { setBusy(false) }
@@ -94,7 +102,7 @@ export function MemberDirectory({ organization }: { organization: { id: string; 
       <main className="main">
         <header className="topbar"><span>Overview <span className="crumb">/ Members</span></span><span className="topbadge">Membership management</span></header>
         <div className="content">{error && !showForm && <p role="alert" className="form-error">{error}</p>}<button disabled={busy || loading} className="outline" onClick={() => setAttempt(n => n + 1)}>Refresh records</button>
-          <div className="heading"><div><div className="eyebrow">{organization.name}</div><h1>Members & dues</h1><p className="muted">A simple home for your members and their dues status.</p></div><button disabled={busy || loading} className="primary" onClick={() => setShowForm(true)}><Plus size={18}/> Add member</button></div>
+          <div className="heading"><div><div className="eyebrow">{organization.name}</div><h1>Members & dues</h1><p className="muted">A simple home for your members and their dues status.</p></div><button disabled={busy || loading} className="primary" onClick={() => openMember()}><Plus size={18}/> Add member</button></div>
           {!loading && !readFailed && <section className="stats">
             <div className="stat"><div className="stat-label"><Users size={17}/> Total members</div><strong>{stats.total}</strong><span>People in your directory</span></div>
             <div className="stat"><div className="stat-label"><Check size={17}/> Paid members</div><strong>{stats.paid}</strong><span>{stats.total ? Math.round(stats.paid / stats.total * 100) : 0}% up to date</span></div>
@@ -103,13 +111,13 @@ export function MemberDirectory({ organization }: { organization: { id: string; 
           </section>}
           <section className="panel">
             <div className="panel-head"><div><h2>Member directory</h2><p className="muted">Track members and manually record dues.</p></div><div className="search"><Search size={17}/><input aria-label="Search members" placeholder="Search members" value={search} onChange={e => setSearch(e.target.value)}/></div></div>
-            {loading ? <p role="status" className="empty">Loading members…</p> : readFailed ? <p className="empty">Records could not be loaded. Use Refresh records to try again.</p> : shown.length ? <div className="table-wrap"><table><thead><tr><th>MEMBER</th><th>DUES</th><th>STATUS</th><th>ACTIONS</th></tr></thead><tbody>{shown.map(m => <tr key={m.id}><td><strong>{m.name}</strong><small>{m.email}</small></td><td>{currency(m.amount)}</td><td><span className={m.paid ? 'pill paid' : 'pill pending'}>{m.paid ? 'Paid' : 'Unpaid'}</span></td><td><button disabled={busy || loading} className="text-button" onClick={() => togglePaid(m.id)}>{m.paid ? 'Mark unpaid' : 'Mark paid'}</button><button disabled={busy || loading} className="icon-button" aria-label={'Remove ' + m.name} onClick={() => removeMember(m.id)}><Trash2 size={16}/></button></td></tr>)}</tbody></table></div> :
-            <div className="empty"><div className="empty-icon"><Users size={29}/></div><h3>{search ? 'No matching members' : 'Your nest starts here'}</h3><p>{search ? 'Try a different name or email.' : 'Add your first member to begin tracking dues. No payment setup required.'}</p>{!search && <button disabled={busy || loading} className="outline" onClick={() => setShowForm(true)}><Plus size={17}/> Add first member</button>}</div>}
+            {loading ? <p role="status" className="empty">Loading members…</p> : readFailed ? <p className="empty">Records could not be loaded. Use Refresh records to try again.</p> : shown.length ? <div className="table-wrap"><table><thead><tr><th>MEMBER</th><th>DUES</th><th>STATUS</th><th>ACTIONS</th></tr></thead><tbody>{shown.map(m => <tr key={m.id}><td><strong>{m.name}</strong><small>{m.email}</small></td><td>{currency(m.amount)}</td><td><span className={m.paid ? 'pill paid' : 'pill pending'}>{m.paid ? 'Paid' : 'Unpaid'}</span></td><td><button disabled={busy || loading} className="text-button" onClick={() => togglePaid(m.id)}>{m.paid ? 'Mark unpaid' : 'Mark paid'}</button><button disabled={busy || loading} className="text-button" aria-label={'Edit ' + m.name} onClick={() => openMember(m)}>Edit</button><button disabled={busy || loading} className="icon-button" aria-label={'Remove ' + m.name} onClick={() => removeMember(m.id)}><Trash2 size={16}/></button></td></tr>)}</tbody></table></div> :
+            <div className="empty"><div className="empty-icon"><Users size={29}/></div><h3>{search ? 'No matching members' : 'Your nest starts here'}</h3><p>{search ? 'Try a different name or email.' : 'Add your first member to begin tracking dues. No payment setup required.'}</p>{!search && <button disabled={busy || loading} className="outline" onClick={() => openMember()}><Plus size={17}/> Add first member</button>}</div>}
           </section>
           <p className="footnote">Records are saved to your organization’s database. Refresh to see changes from other devices. DuesNest does not collect payments.</p>
         </div>
       </main>
-      {showForm && <div className="overlay" onMouseDown={e => { if (!busy && e.target === e.currentTarget) setShowForm(false) }}><div className="modal" role="dialog" aria-modal="true" aria-labelledby="form-title"><div className="modal-head"><h2 id="form-title">Add a member</h2><button disabled={busy || loading} className="close" onClick={() => setShowForm(false)} aria-label="Close">×</button></div><p className="muted">Keep track of a person and what they owe.</p><form onSubmit={addMember}><label>Full name<input autoFocus required maxLength={120} value={name} onChange={e => setName(e.target.value)} placeholder="Taylor Morgan"/></label><label>Email address<input type="email" required maxLength={254} value={email} onChange={e => setEmail(e.target.value)} placeholder="taylor@example.com"/></label><label>Dues amount (USD)<input type="number" min="0" max="1000000" step="0.01" required value={amount} onChange={e => setAmount(e.target.value)}/></label>{error && <p className="form-error" role="alert">{error}</p>}<div className="form-actions"><button disabled={busy || loading} className="outline" type="button" onClick={() => setShowForm(false)}>Cancel</button><button disabled={busy || loading} className="primary" type="submit">Save member</button></div></form></div></div>}
+      {showForm && <div className="overlay" onMouseDown={e => { if (!busy && e.target === e.currentTarget) setShowForm(false) }}><div className="modal" role="dialog" aria-modal="true" aria-labelledby="form-title"><div className="modal-head"><h2 id="form-title">{editing ? 'Edit member' : 'Add a member'}</h2><button disabled={busy || loading} className="close" onClick={() => setShowForm(false)} aria-label="Close">×</button></div><p className="muted">Keep track of a person and what they owe.</p><form onSubmit={addMember}><label>Full name<input autoFocus required maxLength={120} value={name} onChange={e => setName(e.target.value)} placeholder="Taylor Morgan"/></label><label>Email address<input type="email" required maxLength={254} value={email} onChange={e => setEmail(e.target.value)} placeholder="taylor@example.com"/></label><label>Dues amount (USD)<input type="number" min="0" max="1000000" step="0.01" required value={amount} onChange={e => setAmount(e.target.value)}/></label>{error && <p className="form-error" role="alert">{error}</p>}<div className="form-actions"><button disabled={busy || loading} className="outline" type="button" onClick={() => setShowForm(false)}>Cancel</button><button disabled={busy || loading} className="primary" type="submit">Save member</button></div></form></div></div>}
     </div>
   )
 }
