@@ -1,6 +1,6 @@
 import { errorMessage } from './errors'
 import { useEffect, useState, type FormEvent } from 'react'
-import { supabase } from './supabase'
+import { api } from './api'
 import { MemberDirectory } from './MemberDirectory'
 
 type Organization = { id: string; name: string }
@@ -16,13 +16,12 @@ export function Workspace({ userId }: { userId: string }) {
   useEffect(() => {
     let active = true
     setLoading(true); setError('')
-    supabase!.from('organizations').select('id,name').order('created_at').then(({ data, error }) => {
+    api.organizations().then(data => {
       if (!active) return
       setLoading(false)
-      if (error) { setError(error.message); return }
       setOrganizations(data ?? [])
       setSelected(previous => data?.some(o => o.id === previous) ? previous : data?.[0]?.id ?? '')
-    })
+    }).catch(e => { if (active) { setLoading(false); setError(errorMessage(e, 'Unable to load organizations.')) } })
     return () => { active = false }
   }, [attempt])
   async function createOrganization(event: FormEvent) {
@@ -30,8 +29,7 @@ export function Workspace({ userId }: { userId: string }) {
     if (busy || !name.trim()) return
     setBusy(true); setError('')
     try {
-      const { data, error } = await supabase!.from('organizations').insert({ name: name.trim(), owner_id: userId }).select('id,name').single()
-      if (error) throw error
+      const data = await api.createOrganization(name.trim())
       setOrganizations(old => [...old, data]); setSelected(data.id); setName(''); setCreating(false)
     } catch (e) { setError(errorMessage(e, 'Unable to create organization.')) }
     finally { setBusy(false) }
