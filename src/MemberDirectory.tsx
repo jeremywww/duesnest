@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { Check, CircleDollarSign, Plus, Search, Trash2, Users, Wallet } from 'lucide-react'
 import logo from './assets/logo.svg'
 
-import { api } from './api'
+import { supabase } from './supabase'
 type Member = { id: string; name: string; email: string; amount: number; paid: boolean }
 
 const currency = (value: number) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(value)
@@ -28,11 +28,12 @@ export function MemberDirectory({ organization }: { organization: { id: string; 
   useEffect(() => {
     let active = true
     setLoading(true); setReadFailed(false); setError('')
-    api.members(organization.id).then(data => {
+    supabase!.from('members').select('id,name,email,amount,paid').eq('organization_id', organization.id).order('created_at').then(({ data, error }) => {
       if (!active) return
       setLoading(false)
+      if (error) { setReadFailed(true); setError(error.message); return }
       setMembers(data ?? [])
-    }).catch(e => { if (active) { setLoading(false); setReadFailed(true); setError(errorMessage(e, 'Unable to load members.')) } })
+    })
     return () => { active = false }
   }, [organization.id, attempt])
 
@@ -72,7 +73,11 @@ export function MemberDirectory({ organization }: { organization: { id: string; 
     setBusy(true); setError('')
     try {
       const fields = { name: name.trim(), email: email.trim(), amount: Math.round(dollars * 100) / 100 }
-      const data = editing ? await api.updateMember(organization.id, editing, fields) : await api.createMember(organization.id, fields)
+      const query = editing
+        ? supabase!.from('members').update(fields).eq('id', editing).eq('organization_id', organization.id)
+        : supabase!.from('members').insert({ organization_id: organization.id, ...fields, paid: false })
+      const { data, error } = await query.select('id,name,email,amount,paid').single()
+      if (error) throw error
       setMembers(prev => editing ? prev.map(m => m.id === editing ? data : m) : [...prev, data])
       setName(''); setEmail(''); setAmount('50'); setShowForm(false)
     } catch (e) { setError(errorMessage(e, 'Unable to save member.')) }
@@ -85,7 +90,8 @@ export function MemberDirectory({ organization }: { organization: { id: string; 
     if (!member) return
     setBusy(true); setError('')
     try {
-      const data = await api.updatePaid(organization.id, id, !member.paid)
+      const { data, error } = await supabase!.from('members').update({ paid: !member.paid }).eq('id', id).eq('organization_id', organization.id).select('id,name,email,amount,paid').single()
+      if (error) throw error
       setMembers(prev => prev.map(m => m.id === id ? data : m))
     } catch (e) { setError(errorMessage(e, 'Unable to update dues.')) }
     finally { setBusy(false) }
@@ -94,7 +100,8 @@ export function MemberDirectory({ organization }: { organization: { id: string; 
     if (busy || !window.confirm('Remove this member?')) return
     setBusy(true); setError('')
     try {
-      await api.deleteMember(organization.id, id)
+      const { error } = await supabase!.from('members').delete().eq('id', id).eq('organization_id', organization.id).select('id').single()
+      if (error) throw error
       setMembers(prev => prev.filter(m => m.id !== id))
     } catch (e) { setError(errorMessage(e, 'Unable to remove member.')) }
     finally { setBusy(false) }

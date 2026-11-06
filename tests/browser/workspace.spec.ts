@@ -4,6 +4,7 @@ test('server records, organization switching, failed writes, and sign-out', asyn
   const user = { id: '11111111-1111-4111-8111-111111111111', email: 'owner@example.com', aud: 'authenticated', role: 'authenticated', created_at: new Date().toISOString() }
   const jwt = ['eyJhbGciOiJIUzI1NiJ9', Buffer.from(JSON.stringify({ sub: user.id, exp: Math.floor(Date.now()/1000)+3600, role:'authenticated' })).toString('base64url'), 'signature'].join('.')
   let failWrite = false
+  let failOrganizationRead = true
   const records: Record<string, { id: string; name: string; email: string; amount: number; paid: boolean }[]> = { a: [{ id: 'm1', name: 'Taylor', email: 't@example.com', amount: 50, paid: false }], b: [] }
   await page.route('https://test.supabase.co/**', async route => {
     const req = route.request(), url = new URL(req.url()), method = req.method()
@@ -11,7 +12,10 @@ test('server records, organization switching, failed writes, and sign-out', asyn
     if (url.pathname.endsWith('/token')) return json({ access_token: jwt, refresh_token:'refresh', expires_in:3600, token_type:'bearer', user })
     if (url.pathname.endsWith('/logout')) return json({})
     if (url.pathname.endsWith('/user')) return json(user)
-    if (url.pathname.endsWith('/organizations')) return json([{ id:'a', name:'Club A' },{ id:'b', name:'Club B' }])
+    if (url.pathname.endsWith('/organizations')) {
+      if (failOrganizationRead) return json({ message:'Organization service unavailable' }, 500)
+      return json([{ id:'a', name:'Club A' },{ id:'b', name:'Club B' }])
+    }
     if (url.pathname.endsWith('/members')) {
       const org = url.searchParams.get('organization_id')?.replace('eq.','') ?? 'a'
       if (method === 'GET') return json(records[org])
@@ -25,6 +29,10 @@ test('server records, organization switching, failed writes, and sign-out', asyn
   await page.getByLabel('Email', { exact:true }).fill(user.email)
   await page.getByLabel('Password', { exact:true }).fill('test-password-123')
   await page.getByRole('button', { name:'Sign in', exact:true }).click()
+  await expect(page.getByRole('alert')).toContainText('Organization service unavailable')
+  await expect(page.getByLabel('New organization', { exact:true })).toHaveCount(0)
+  failOrganizationRead = false
+  await page.getByRole('button', { name:'Reload organizations' }).click()
   await expect(page.getByText('Taylor', { exact:true })).toBeVisible()
   const csvDownload = page.waitForEvent('download')
   await page.getByRole('button', { name:'Download CSV' }).click()
